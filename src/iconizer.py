@@ -19,6 +19,12 @@ def colour_histogram(img):
     return histogram
 
 
+def find_rectangles(img):
+    """
+    find rectangles and then predominant colours in them.
+    """
+
+
 def main():
     with Image.open("Green.png") as img:
         img.load()
