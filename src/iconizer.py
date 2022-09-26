@@ -3,6 +3,9 @@ from collections import Counter
 from PIL import Image
 import cv2 as cv
 import numpy as np
+import time
+import itertools
+import multiprocessing
 
 
 def colour_histogram(img):
@@ -19,15 +22,14 @@ def colour_histogram(img):
     return histogram
 
 
-def find_rectangles(image, min_thresh, max_thresh, kernel, iterations):
+def find_rectangles(image, min_thresh, max_thresh, kernel_limit, iterations):
     """
     find rectangles and then predominant colours in them.
     """
-    
-    image = cv.imread(image)
+    time.sleep(0.1)
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     blur = cv.medianBlur(gray, 5)
-    sharpen_kernel = np.array([[-1,-1,-1], [-1,kernel,-1], [-1,-1,-1]])
+    sharpen_kernel = np.array([[-1,-1,-1], [-1,kernel_limit,-1], [-1,-1,-1]])
     sharpen = cv.filter2D(blur, -1, sharpen_kernel)
 
     # Threshold and morph close
@@ -54,19 +56,33 @@ def find_rectangles(image, min_thresh, max_thresh, kernel, iterations):
             found += 1
             cv.rectangle(image, (x, y), (x + w, y + h), (36,255,12), 2)
             image_number += 1
-    if found >= 4:
+    if found >= 5:
         ROI = image[y:y+h, x:x+w]
-        cv.imwrite(f'ROI_{min_thresh}_{max_thresh}_{kernel}_{iterations}.png')
+        cv.imwrite(f'ROI_{min_thresh}_{max_thresh}_{kernel_limit}_{iterations}.png', image)
+        print("Found!!!")
     return found
- 
+
+
+def loops(value):
+    image = value[0]
+    iterations = value[1]
+    kernel = value[2]
+    min = value[3]
+    max = value[4]
+    val = find_rectangles(image, min, max, kernel, iterations)
 
 def main():
-    for iterations in range(0,5):
-        for kernel in range(5,15):
-            for min in range(0, 255):
-                for max in range(255, 0, -1):
-                    val = find_rectangles(sys.argv[1], min, max, kernel, iterations)
+    image = cv.imread(sys.argv[1])
+    iterations = range(0, 5)
+    kernel = range(3, 15)
+    min = range(0, 255)
+    max = range(255, 0, -1)
 
+    paramlist = list(itertools.product(image, iterations, kernel, min, max))
+    
+    pool = multiprocessing.Pool(processes=2)
+
+    res = pool.map(loops, paramlist)
     
 if __name__ == "__main__":
     main()
